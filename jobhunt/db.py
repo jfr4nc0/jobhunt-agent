@@ -50,6 +50,10 @@ def canonical_url(url: str) -> str:
     path = parts.path.rstrip("/") or "/"
     if host in {"linkedin.com", "www.linkedin.com"} and re.fullmatch(r"/jobs/view/\d+", path):
         return f"https://www.linkedin.com{path}"
+    if host in {"boards.greenhouse.io", "job-boards.greenhouse.io"}:
+        # Both Greenhouse domains serve the same board, and some URLs add a variant suffix.
+        path = re.sub(r"(/jobs/\d+)-\d+$", r"\1", path)
+        host = "job-boards.greenhouse.io"
     if host in {"jobs.lever.co", "jobs.eu.lever.co", "jobs.ashbyhq.com",
                 "boards.greenhouse.io", "job-boards.greenhouse.io"}:
         return urlunsplit(("https", host, path, "", ""))
