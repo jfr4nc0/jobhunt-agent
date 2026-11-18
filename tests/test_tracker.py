@@ -47,7 +47,7 @@ def test_board_normalization_and_match(monkeypatch, tmp_path):
     candidate = tmp_path / "profile.json"
     candidate.write_text(json.dumps({
         "home_search_aliases": ["Chile", "LATAM", "Latin America", "South America"],
-        "target_location_aliases": ["Germany", "Berlin"],
+        "target_location_aliases": ["Germany", "Berlin", "Australia", "Sydney", "Netherlands", "Amsterdam"],
     }), encoding="utf-8")
     monkeypatch.setattr(sources, "PROFILE_PATH", candidate)
     monkeypatch.setattr(sources, "fetch_json", lambda url: {
@@ -68,6 +68,14 @@ def test_board_normalization_and_match(monkeypatch, tmp_path):
     assert sources.infer_remote_scope("Berlin; Germany", "Visa sponsorship and relocation support are available.",
                                       False, "OnSite") == "sponsored_abroad"
     assert sources.infer_remote_scope("Berlin; Germany", "Visa sponsorship is not available.",
+                                      False, "OnSite") == "excluded"
+    assert sources.infer_remote_scope("Sydney; Australia", "x" * 6000 +
+                                      " Visa sponsorship. For engineers relocating to Australia.",
+                                      False, "OnSite") == "sponsored_abroad"
+    assert sources.infer_remote_scope("Amsterdam office; Remote (EU)",
+                                      "Relocation support, visa sponsorship and 30% ruling support",
+                                      None, "Hybrid") == "sponsored_abroad"
+    assert sources.infer_remote_scope("Sydney; Australia", "We cannot offer visa sponsorship.",
                                       False, "OnSite") == "excluded"
     assert sources.infer_remote_scope("Global - Remote", "Python") == "home_ok"
     assert sources.infer_remote_scope("São Paulo, Brasil", "Remote team with LATAM colleagues") == "excluded"

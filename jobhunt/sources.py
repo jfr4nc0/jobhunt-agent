@@ -60,7 +60,7 @@ def _mentions(text: str, aliases: tuple[str, ...]) -> bool:
 
 def infer_remote_scope(location: str, description: str, is_remote: bool | None = None,
                        workplace_type: str = "") -> str:
-    loc, body = location.lower(), description[:5000].lower()
+    loc, body = location.lower(), description[:20000].lower()
     workplace = workplace_type.lower()
     home_aliases = _profile_aliases("home_search_aliases")
     target_aliases = _profile_aliases("target_location_aliases")
@@ -135,10 +135,14 @@ def manual_only(description: str) -> bool:
 
 def sponsorship_advertised(description: str) -> bool:
     text = description.lower()
-    if re.search(r"\b(no visa sponsorship|visa sponsorship (?:is )?not available|unable to (?:provide )?visa sponsorship|do not sponsor visas)\b", text):
+    if re.search(r"\b(no visa sponsorship|visa sponsorship (?:is )?not available|"
+                 r"(?:cannot|can't|unable to|not in a position to|do not|don't)\s+(?:offer|provide|support)?\s*visa sponsorship|"
+                 r"do not sponsor visas)\b", text):
         return False
     return bool(re.search(r"\b(visa sponsorship (?:is )?available|visa sponsorship and relocation|"
-                          r"relocation support and visa sponsorship|sponsor visas|visa sponsorship offered)\b", text))
+                          r"relocation support(?: and|,)\s*visa sponsorship|including visa sponsorship|"
+                          r"visa sponsorship as a|visa sponsorship where necessary|"
+                          r"sponsor visas|visa sponsorship offered|visa sponsorship\.\s*(?:for\b|$))", text))
 
 
 def _enrich(job: dict) -> dict:
