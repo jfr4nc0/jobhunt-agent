@@ -67,6 +67,9 @@ def test_board_normalization_and_match(monkeypatch, tmp_path):
     assert found[0]["match_score"] >= 55
     assert "Python" in found[0]["description"]
     assert sources.board_from_url("https://jobs.ashbyhq.com/acme/123") == ("ashby", "acme")
+    assert sources.board_from_url("https://jobs.ashbyhq.com/Superhuman%20Platform%20Inc/123") == \
+           ("ashby", "Superhuman Platform Inc")
+    assert db.add_board("ashby", "Superhuman Platform Inc", "Superhuman", tmp_path / "boards.sqlite3") > 0
     assert sources.board_from_url("https://jobs.lever.co/acme/abc") == ("lever", "acme")
     assert sources.infer_remote_scope("Remote - US only", "Python") == "excluded"
     assert sources.infer_remote_scope("Australia", "Work with teams in Latin America", True, "Remote") == "excluded"

@@ -6,7 +6,7 @@ import json
 import re
 from datetime import datetime, timezone
 from html import unescape
-from urllib.parse import quote, urlsplit
+from urllib.parse import quote, unquote, urlsplit
 from urllib.request import Request, urlopen
 
 from . import db
@@ -35,10 +35,10 @@ def ashby_salary(value: dict | str | None) -> str | None:
         return value.strip() or None
     if not isinstance(value, dict):
         return None
-    components = [component for tier in value.get("compensationTiers") or []
-                  for component in tier.get("components") or []]
+    components = value.get("summaryComponents") or []
     if not components:
-        components = value.get("summaryComponents") or []
+        components = [component for tier in value.get("compensationTiers") or []
+                      for component in tier.get("components") or []]
     salaries = {(
         component.get("currencyCode"), component.get("interval"),
         component.get("minValue"), component.get("maxValue"))
@@ -278,7 +278,7 @@ def board_from_url(url: str) -> tuple[str, str] | None:
     if host in {"jobs.lever.co", "jobs.eu.lever.co"}:
         return "lever", segments[0]
     if host == "jobs.ashbyhq.com":
-        return "ashby", segments[0]
+        return "ashby", unquote(segments[0])
     return None
 
 

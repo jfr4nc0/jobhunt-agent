@@ -12,6 +12,17 @@ def test_ashby_structured_salary_keeps_currency_and_period():
     assert salary.applicable_band({"salary": extracted}, "GBP", "GB")["low_annual"] == 115000
 
 
+def test_ashby_primary_country_salary_is_not_confused_with_other_tiers():
+    argentina = {"compensationType": "Salary", "interval": "1 YEAR", "currencyCode": "ARS",
+                 "minValue": 152000000, "maxValue": 160000000}
+    brazil = {"compensationType": "Salary", "interval": "1 YEAR", "currencyCode": "BRL",
+              "minValue": 538000, "maxValue": 669000}
+    extracted = sources.ashby_salary({"summaryComponents": [argentina],
+        "compensationTiers": [{"components": [argentina]}, {"components": [brazil]}]})
+    assert extracted == "ARS 152,000,000 - ARS 160,000,000 annually"
+    assert salary.applicable_band({"salary": extracted}, "ARS", "AR")["low_annual"] == 152000000
+
+
 CANDIDATE = {"screening": {"salary_expectation": {
     "strategy": "local_role_median", "basis": "gross", "period": "month"}}}
 

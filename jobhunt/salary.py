@@ -11,6 +11,9 @@ CURRENCY_MARKERS = {
     "USD": r"(?:US\$|USD|\$)", "EUR": r"(?:EUR|€)", "GBP": r"(?:GBP|£)",
     "CHF": r"CHF", "AUD": r"(?:AUD|A\$)", "NZD": r"(?:NZD|NZ\$)",
     "SGD": r"(?:SGD|S\$)", "DKK": r"DKK", "NOK": r"NOK",
+    "PLN": r"(?:PLN|zł)", "CNY": r"(?:CNY|CN¥|RMB)",
+    "HKD": r"(?:HKD|HK\$)", "SEK": r"SEK",
+    "ARS": r"ARS", "BRL": r"(?:BRL|R\$)", "MXN": r"(?:MXN|MX\$)",
 }
 PERIOD = r"annually|annual(?: base)?|per year|/year|yearly|monthly|per month|/month"
 

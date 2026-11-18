@@ -182,8 +182,10 @@ def _event(conn: sqlite3.Connection, job_id: int, event_type: str, details: dict
 
 def add_board(provider: str, slug: str, company_name: str, db_path: Path = DB_PATH) -> int:
     provider, slug = provider.strip().lower(), slug.strip()
-    if provider not in {"greenhouse", "lever", "ashby"} or not re.fullmatch(r"[A-Za-z0-9_-]+", slug):
-        raise ValueError("Provider must be greenhouse, lever or ashby and slug must be alphanumeric")
+    slug_pattern = (r"[A-Za-z0-9_-]+(?:[ .][A-Za-z0-9_-]+)*" if provider == "ashby"
+                    else r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*")
+    if provider not in {"greenhouse", "lever", "ashby"} or not re.fullmatch(slug_pattern, slug):
+        raise ValueError("Provider must be greenhouse, lever or ashby and slug must be a safe board name")
     init_db(db_path)
     with connect(db_path) as conn:
         conn.execute("INSERT INTO boards(provider,slug,company_name) VALUES (?,?,?) "
