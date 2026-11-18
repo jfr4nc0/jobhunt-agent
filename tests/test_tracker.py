@@ -118,6 +118,8 @@ def test_board_normalization_and_match(monkeypatch, tmp_path):
     }]})
     assert sources.fetch_board("ashby", "acme", "Acme")[0]["remote_scope"] == "excluded"
     assert sources.manual_only("Recruiter and AI submissions will be rejected.")
+    assert sources.manual_only("AI is not used to assess applications. We ask that you refrain from using it in your application.")
+    assert not sources.manual_only("We use AI tools to review applications and support hiring decisions.")
 
 
 def test_lever_sections_and_ashby_placeholder(monkeypatch):

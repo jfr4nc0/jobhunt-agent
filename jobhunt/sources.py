@@ -160,8 +160,12 @@ def score_job(title: str, location: str, description: str, remote_scope: str) ->
 
 
 def manual_only(description: str) -> bool:
-    return bool(re.search(r"\b(ai submissions will be rejected|no ai.generated applications|do not use ai to apply)\b",
-                          description, re.I))
+    text = plain_text(description).lower()
+    return bool(re.search(
+        r"\b(ai submissions will be rejected|no ai.generated applications|"
+        r"do not use ai (?:to apply|in (?:your|the) application)|"
+        r"ai.assisted (?:applications|submissions) (?:are )?not accepted)\b", text)
+        or re.search(r"\bai\b.{0,320}\brefrain from using it (?:anywhere within|in) your application\b", text))
 
 
 def sponsorship_advertised(description: str) -> bool:
