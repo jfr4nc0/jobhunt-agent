@@ -87,6 +87,12 @@ def infer_remote_scope(location: str, description: str, is_remote: bool | None =
     workplace = workplace_type.lower()
     home_aliases = _profile_aliases("home_search_aliases")
     target_aliases = _profile_aliases("target_location_aliases")
+    remote = is_remote is True or workplace == "remote" or bool(re.search(
+        r"\b(remote|remoto|work from anywhere)\b", f"{loc} {body}"))
+    if remote and re.search(r"\b(us only|usa only|united states only|canada only|eu only|europe only|uk only|within the us|u\.s\. only)\b", f"{loc} {body}"):
+        return "excluded"
+    if remote and (_mentions(loc, home_aliases) or re.search(r"\b(worldwide|anywhere|global)\b", loc)):
+        return "home_ok"
     target_abroad = _mentions(loc, target_aliases)
     if target_abroad and sponsorship_advertised(body):
         return "sponsored_abroad"
@@ -99,14 +105,8 @@ def infer_remote_scope(location: str, description: str, is_remote: bool | None =
         return "unknown"
     if workplace in {"onsite", "on-site", "hybrid"} or is_remote is False:
         return "excluded"
-    if re.search(r"\b(us only|usa only|united states only|canada only|eu only|europe only|uk only|within the us|u\.s\. only)\b", f"{loc} {body}"):
-        return "excluded"
-    remote = is_remote is True or workplace == "remote" or bool(re.search(
-        r"\b(remote|remoto|work from anywhere)\b", f"{loc} {body}"))
     if not remote:
         return "unknown"
-    if _mentions(loc, home_aliases) or re.search(r"\b(worldwide|anywhere|global)\b", loc):
-        return "home_ok"
     if loc and not re.fullmatch(r"\s*(remote|remoto)\s*", loc):
         return "excluded"
     if re.search(r"\b(work from anywhere|worldwide remote|global remote)\b", body):

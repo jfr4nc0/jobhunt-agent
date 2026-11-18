@@ -74,6 +74,7 @@ def test_board_normalization_and_match(monkeypatch, tmp_path):
     assert sources.infer_remote_scope("Remote - US only", "Python") == "excluded"
     assert sources.infer_remote_scope("Australia", "Work with teams in Latin America", True, "Remote") == "excluded"
     assert sources.infer_remote_scope("Brazil; Chile", "Python", True, "Remote") == "home_ok"
+    assert sources.infer_remote_scope("Chile; Germany; Netherlands", "Python", True, "Remote") == "home_ok"
     assert sources.infer_remote_scope("Berlin; Germany", "Visa sponsorship and relocation support are available.",
                                       False, "OnSite") == "sponsored_abroad"
     assert sources.infer_remote_scope("Berlin; Germany", "Visa sponsorship is not available.",
