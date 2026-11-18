@@ -84,6 +84,8 @@ def test_board_normalization_and_match(monkeypatch, tmp_path):
     assert sources.infer_remote_scope("Singapore; Remote (Asia)",
                                       "Visa Sponsorship: We provide support for relocation and visas for full-time candidates.",
                                       False, "Hybrid") == "sponsored_abroad"
+    assert sources.sponsorship_advertised("Visa: Employer sponsors the Dutch highly skilled migrant visa.")
+    assert not sources.sponsorship_advertised("Visa: We do not sponsor work visas.")
     assert sources.infer_remote_scope("Sydney; Australia", "We cannot offer visa sponsorship.",
                                       False, "OnSite") == "excluded"
     assert sources.infer_remote_scope("Global - Remote", "Python") == "home_ok"
