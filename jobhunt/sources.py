@@ -139,7 +139,8 @@ def sponsorship_advertised(description: str) -> bool:
                  r"(?:cannot|can't|unable to|not in a position to|do not|don't)\s+(?:offer|provide|support)?\s*visa sponsorship|"
                  r"do not sponsor visas)\b", text):
         return False
-    return bool(re.search(r"\b(visa sponsorship (?:is )?available|visa sponsorship and relocation|"
+    return bool(re.search(r"\b(visa sponsorship (?:is )?available|visa sponsorship (?:and|&) relocation|"
+                          r"visa sponsorship\s*:\s*(?:we\s+)?(?:provide|offer|support|available)|"
                           r"relocation support(?: and|,)\s*visa sponsorship|including visa sponsorship|"
                           r"visa sponsorship as a|visa sponsorship where necessary|"
                           r"sponsor visas|visa sponsorship offered|visa sponsorship\.\s*(?:for\b|$))", text))

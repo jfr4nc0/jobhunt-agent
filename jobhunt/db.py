@@ -422,6 +422,24 @@ def save_review(job_id: int, draft: dict, cv_path: str, db_path: Path = DB_PATH)
         _event(conn, job_id, "ready_for_review", {"url": draft.get("url")})
 
 
+def save_partial_draft(job_id: int, draft: dict, cv_path: str, reason: str,
+                       db_path: Path = DB_PATH) -> None:
+    """Persist a form that cannot be submitted until missing facts are supplied."""
+    if not reason.strip():
+        raise ValueError("A reason is required for a partial draft")
+    init_db(db_path)
+    with connect(db_path) as conn:
+        current = conn.execute("SELECT status FROM applications WHERE job_id=?", (job_id,)).fetchone()
+        if not current:
+            raise KeyError(f"Job {job_id} not found")
+        if current[0] in {"submitted", "interviewing", "offer", "rejected", "withdrawn"}:
+            raise ValueError("This application is already submitted or closed")
+        conn.execute("""UPDATE applications SET status='needs_manual',draft_json=?,cv_path=?,
+            notes=?,updated_at=? WHERE job_id=?""",
+            (json.dumps(draft, ensure_ascii=False), cv_path, reason.strip(), now(), job_id))
+        _event(conn, job_id, "needs_manual", {"reason": reason.strip(), "url": draft.get("url")})
+
+
 def approve(job_id: int, db_path: Path = DB_PATH, basis: str = "per_vacancy") -> None:
     if get_job(job_id, db_path)["status"] != "ready_for_review":
         raise ValueError("Application must be ready for review")

@@ -41,13 +41,19 @@ def test_job_dedup_and_application_history(tmp_path: Path):
     assert corrected["status"] == "needs_manual"
     assert corrected["submitted_at"] is None
     assert corrected["events"][-1]["event_type"] == "submission_failed"
+    db.save_partial_draft(first, {"url": "https://example.com/apply", "missing": ["traffic"]},
+                          "/tmp/current-cv.pdf", "Missing traffic figure", db_path)
+    partial = db.get_job(first, db_path)
+    assert partial["status"] == "needs_manual"
+    assert partial["draft"]["missing"] == ["traffic"]
+    assert partial["notes"] == "Missing traffic figure"
 
 
 def test_board_normalization_and_match(monkeypatch, tmp_path):
     candidate = tmp_path / "profile.json"
     candidate.write_text(json.dumps({
         "home_search_aliases": ["Chile", "LATAM", "Latin America", "South America"],
-        "target_location_aliases": ["Germany", "Berlin", "Australia", "Sydney", "Netherlands", "Amsterdam"],
+        "target_location_aliases": ["Germany", "Berlin", "Australia", "Sydney", "Netherlands", "Amsterdam", "Singapore"],
     }), encoding="utf-8")
     monkeypatch.setattr(sources, "PROFILE_PATH", candidate)
     monkeypatch.setattr(sources, "fetch_json", lambda url: {
@@ -75,6 +81,9 @@ def test_board_normalization_and_match(monkeypatch, tmp_path):
     assert sources.infer_remote_scope("Amsterdam office; Remote (EU)",
                                       "Relocation support, visa sponsorship and 30% ruling support",
                                       None, "Hybrid") == "sponsored_abroad"
+    assert sources.infer_remote_scope("Singapore; Remote (Asia)",
+                                      "Visa Sponsorship: We provide support for relocation and visas for full-time candidates.",
+                                      False, "Hybrid") == "sponsored_abroad"
     assert sources.infer_remote_scope("Sydney; Australia", "We cannot offer visa sponsorship.",
                                       False, "OnSite") == "excluded"
     assert sources.infer_remote_scope("Global - Remote", "Python") == "home_ok"
