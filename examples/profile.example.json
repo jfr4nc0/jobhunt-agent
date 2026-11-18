@@ -1,0 +1,43 @@
+{
+  "name": "Alex Example",
+  "headline": "Software Engineer",
+  "location": "Toronto, Canada",
+  "email": "alex@example.org",
+  "phone": "+1 555 010 0000",
+  "links": {
+    "website": "https://example.org",
+    "github": "https://github.com/example"
+  },
+  "summary": "Software engineer building reliable backend services and developer tools.",
+  "application_mode": "review",
+  "citizenships": ["CA"],
+  "home_search_aliases": ["Canada", "North America"],
+  "target_location_aliases": ["Germany", "Berlin", "Netherlands", "Amsterdam"],
+  "target_roles": ["Software Engineer", "Backend Engineer", "AI Engineer"],
+  "cv_variants": {
+    "default": "resume.pdf"
+  },
+  "experience": [
+    {
+      "company": "Example Labs",
+      "title": "Software Engineer",
+      "start": "2023-01",
+      "end": null,
+      "bullets": ["Built and operated backend APIs."],
+      "stack": ["Python", "PostgreSQL"]
+    }
+  ],
+  "skills": ["Python", "PostgreSQL", "Docker"],
+  "education": [],
+  "certifications": [],
+  "languages": ["English"],
+  "screening": {
+    "work_authorization": null,
+    "salary_expectation": {
+      "strategy": "local_role_median",
+      "basis": "gross",
+      "period": "month"
+    },
+    "notice_period": null
+  }
+}
