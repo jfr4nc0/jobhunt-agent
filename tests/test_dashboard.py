@@ -17,6 +17,8 @@ def test_dashboard_reads_live_status_and_escapes_untrusted_job_text(tmp_path):
         "match_score": 90,
     }, db_path)
     db.set_status(job_id, "needs_manual", {"note": "CAPTCHA <blocked>"}, db_path)
+    db.save_partial_draft(job_id, {"fields": [{"label": "Phone", "value": None, "required": True}]},
+                          "/tmp/cv.pdf", "CAPTCHA <blocked>", db_path)
 
     listing = dashboard.render_index(db_path=db_path).decode()
     assert "Needs your action" in listing
@@ -29,6 +31,11 @@ def test_dashboard_reads_live_status_and_escapes_untrusted_job_text(tmp_path):
     assert "&lt;svg onload=alert(1)&gt;" in detail
     assert "CAPTCHA &lt;blocked&gt;" in detail
     assert "<svg onload" not in detail
+
+    actions = dashboard.render_actions(db_path).decode()
+    assert "Missing:</strong> Phone" in actions
+    assert "CAPTCHA &lt;blocked&gt;" in actions
+    assert "<script>" not in actions
 
 
 def test_confirmed_submission_remains_counted_during_interviews(tmp_path):

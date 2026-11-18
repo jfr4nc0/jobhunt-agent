@@ -9,7 +9,7 @@ A self-hosted job discovery and application tracker for Codex or another MCP-cap
 - Tracks application status, reviews, the exact submitted resume version, follow-up dates, events, and linked email metadata in SQLite.
 - Suggests a salary answer only after a dated, sourced local role benchmark is recorded. It does not invent exchange rates or compensation figures.
 - Exposes job and browser actions through an MCP server. Review mode is the default; autonomous mode must be selected in the private profile.
-- Shows jobs, status counts, history, and linked mail in a read-only dashboard that updates through Server-Sent Events.
+- Shows jobs, status counts, history, linked mail, and an actions-needed queue in a read-only dashboard that updates through Server-Sent Events.
 
 ## Requirements
 
@@ -32,7 +32,7 @@ uv run jobhunt doctor
 uv run jobhunt dashboard
 ```
 
-Open `http://127.0.0.1:8765/`. The dashboard binds only to loopback and requires no external service. Refreshing public boards updates the page automatically:
+Open `http://127.0.0.1:8765/`. The dashboard binds only to loopback and requires no external service. Open `http://127.0.0.1:8765/actions` to see applications awaiting facts, review, or verification. Refreshing public boards updates the page automatically:
 
 ```bash
 uv run jobhunt boards add ashby example-company "Example Company"

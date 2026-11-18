@@ -1,7 +1,15 @@
 from datetime import date
 from pathlib import Path
 
-from jobhunt import db, salary
+from jobhunt import db, salary, sources
+
+
+def test_ashby_structured_salary_keeps_currency_and_period():
+    extracted = sources.ashby_salary({"scrapeableCompensationSalarySummary": "£115K - £130K",
+        "summaryComponents": [{"compensationType": "Salary", "interval": "1 YEAR",
+                               "currencyCode": "GBP", "minValue": 115000, "maxValue": 130000}]})
+    assert extracted == "GBP 115,000 - GBP 130,000 annually"
+    assert salary.applicable_band({"salary": extracted}, "GBP", "GB")["low_annual"] == 115000
 
 
 CANDIDATE = {"screening": {"salary_expectation": {

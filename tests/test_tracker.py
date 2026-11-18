@@ -88,6 +88,10 @@ def test_board_normalization_and_match(monkeypatch, tmp_path):
     assert not sources.sponsorship_advertised("Visa: We do not sponsor work visas.")
     assert sources.infer_remote_scope("Sydney; Australia", "We cannot offer visa sponsorship.",
                                       False, "OnSite") == "excluded"
+    assert sources.infer_remote_scope("Amsterdam; Netherlands", "Relocation support available.",
+                                      False, "Hybrid") == "unknown"
+    assert sources.sponsorship_advertised("Skilled Worker visa sponsorship")
+    assert sources.sponsorship_advertised("Visa sponsorship: Yes")
     assert sources.infer_remote_scope("Global - Remote", "Python") == "home_ok"
     assert sources.infer_remote_scope("São Paulo, Brasil", "Remote team with LATAM colleagues") == "excluded"
     monkeypatch.setattr(sources, "fetch_json", lambda url: {"jobs": [{
@@ -98,6 +102,23 @@ def test_board_normalization_and_match(monkeypatch, tmp_path):
     }]})
     assert sources.fetch_board("ashby", "acme", "Acme")[0]["remote_scope"] == "excluded"
     assert sources.manual_only("Recruiter and AI submissions will be rejected.")
+
+
+def test_lever_sections_and_ashby_placeholder(monkeypatch):
+    monkeypatch.setattr(sources, "fetch_json", lambda url: [{
+        "id": "1", "text": "Backend Engineer", "hostedUrl": "https://jobs.lever.co/example/1",
+        "categories": {"location": "Amsterdam, Netherlands"}, "workplaceType": "hybrid",
+        "descriptionPlain": "Build APIs with Python.",
+        "lists": [{"text": "Benefits", "content": "<li>Visa sponsorship available</li>"}],
+    }])
+    lever = sources.fetch_board("lever", "example", "Example")[0]
+    assert "Visa sponsorship available" in lever["description"]
+    assert lever["remote_scope"] == "sponsored_abroad"
+    monkeypatch.setattr(sources, "fetch_json", lambda url: {"jobs": [
+        {"id": "bad", "title": "", "jobUrl": "https://jobs.ashbyhq.com/example/bad"},
+        {"id": "good", "title": "Engineer", "jobUrl": "https://jobs.ashbyhq.com/example/good"},
+    ]})
+    assert len(sources.fetch_board("ashby", "example", "Example")) == 1
 
 
 def test_follow_up_is_persistent(tmp_path: Path):

@@ -48,6 +48,7 @@ input{min-width:240px;flex:1}button{background:#246fac;border-color:#246fac;curs
 .live-status{position:fixed;right:16px;bottom:14px;background:#172337;border:1px solid #41546f;border-radius:30px;padding:7px 12px;color:#b7c4d6;font-size:12px;box-shadow:0 4px 18px #0006}.live-status.connected{border-color:#2d9168;color:#b3f3cc}
 .pager{display:flex;gap:14px;margin:17px 0}.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:16px 0}.meta div{padding:12px;background:#172337;border:1px solid #2b3b54;border-radius:9px}
 .meta small{display:block;color:#aeb9c9;margin-bottom:4px}.description,.event{white-space:pre-wrap;overflow-wrap:anywhere;padding:16px}.event{border-bottom:1px solid #2b3b54}.event:last-child{border:0}.event p{margin:7px 0 0}.empty{padding:22px;color:#b7c4d6}
+.action-list{display:grid;gap:12px}.action-item{padding:16px}.action-item h3{font-size:16px;margin:0 0 8px}.action-item p{margin:6px 0;line-height:1.45}
 @media(max-width:760px){main{padding:20px 12px}table{display:block;overflow-x:auto}th,td{min-width:110px}.cards{grid-template-columns:repeat(2,1fr)}}
 """
 
@@ -123,6 +124,37 @@ def _badge(status: str) -> str:
     return f'<span class="badge {escape(status)}">{escape(label)}</span>'
 
 
+def render_actions(db_path: Path = DB_PATH) -> bytes:
+    """List unresolved applications and missing required draft fields."""
+    db.init_db(db_path)
+    statuses = ("needs_manual", "ready_for_review", "awaiting_verification", "verification_pending")
+    with db.connect(db_path) as conn:
+        rows = conn.execute("""SELECT j.id,c.name AS company,j.title,a.status,a.notes,
+            a.draft_json,a.updated_at FROM jobs j JOIN companies c ON c.id=j.company_id
+            JOIN applications a ON a.job_id=j.id WHERE a.status IN (?,?,?,?)
+            ORDER BY CASE a.status WHEN 'awaiting_verification' THEN 0
+            WHEN 'ready_for_review' THEN 1 WHEN 'needs_manual' THEN 2 ELSE 3 END,
+            a.updated_at DESC""", statuses).fetchall()
+    items = []
+    for row in rows:
+        draft = json.loads(row["draft_json"] or "null") or {}
+        missing = [str(field.get("label") or "Field") for field in draft.get("fields") or []
+                   if isinstance(field, dict) and field.get("required") and not field.get("value")]
+        details = (f'<p><strong>Missing:</strong> {escape(", ".join(missing))}</p>' if missing else "")
+        if row["notes"]:
+            details += f'<p class="muted">{escape(row["notes"])}</p>'
+        items.append('<article class="panel action-item">'
+                     f'<h3><a href="/job/{row["id"]}">#{row["id"]} {escape(row["company"])} · {escape(row["title"])}</a></h3>'
+                     f'<p>{_badge(row["status"])} · {escape((row["updated_at"] or "")[:16].replace("T", " "))}</p>'
+                     + details + '</article>')
+    body = ('<a href="/">← All jobs</a><h1>Actions needed</h1>'
+            '<p class="sub">Applications waiting for facts, review, or verification. This view updates live.</p>'
+            f'<p class="muted">{len(rows)} pending applications</p>'
+            '<div class="action-list">' + (''.join(items) or '<div class="panel empty">No pending actions.</div>')
+            + '</div>')
+    return page("Actions needed", body)
+
+
 def render_index(status: str = "", query: str = "", page_no: int = 1,
                  db_path: Path = DB_PATH) -> bytes:
     status = status if status in db.STATUSES else ""
@@ -184,7 +216,7 @@ def render_index(status: str = "", query: str = "", page_no: int = 1,
     pager += "</nav>"
     body = (f"<header><div><h1>{escape(DASHBOARD_TITLE)}</h1>"
             "<p class='sub'>SQLite source of truth · Unverified attempts are not counted as submitted.</p></div>"
-            "<span class='muted'>Local view · updates automatically</span></header>"
+            "<span class='muted'><a href='/actions'>Actions needed ↗</a> · updates automatically</span></header>"
             f'<div class="cards">{cards}</div>'
             f'<form method="get" action="/"><input name="q" value="{escape(query, quote=True)}" placeholder="Company, role or location">'
             f'<select name="status">{options}</select><button type="submit">Filter</button></form>'
@@ -273,6 +305,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 status = 200
             elif parsed.path.startswith("/job/") and parsed.path[5:].isdigit():
                 content = render_job(int(parsed.path[5:]), self.database_path)
+                status = 200
+            elif parsed.path == "/actions":
+                content = render_actions(self.database_path)
                 status = 200
             elif parsed.path == "/dashboard.js":
                 content = SCRIPT.encode("utf-8")

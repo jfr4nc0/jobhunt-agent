@@ -35,11 +35,34 @@ def ashby_salary(value: dict | str | None) -> str | None:
         return value.strip() or None
     if not isinstance(value, dict):
         return None
+    components = [component for tier in value.get("compensationTiers") or []
+                  for component in tier.get("components") or []]
+    if not components:
+        components = value.get("summaryComponents") or []
+    salaries = {(
+        component.get("currencyCode"), component.get("interval"),
+        component.get("minValue"), component.get("maxValue"))
+        for component in components if component.get("compensationType") == "Salary"}
+    if len(salaries) == 1:
+        currency, interval, low, high = next(iter(salaries))
+        period = {"1 YEAR": "annually", "1 MONTH": "monthly"}.get(interval)
+        if currency and period and isinstance(low, (int, float)) and isinstance(high, (int, float)) \
+                and 0 < low <= high and low != high:
+            return f"{currency} {low:,.0f} - {currency} {high:,.0f} {period}"
     summary = value.get("scrapeableCompensationSalarySummary") or value.get("compensationTierSummary")
     if summary:
         return str(summary)
     tiers = value.get("compensationTiers") or value.get("summaryComponents")
     return json.dumps(tiers, ensure_ascii=False) if tiers else None
+
+
+def lever_description(item: dict) -> str:
+    """Include Lever sections that descriptionPlain omits."""
+    sections = [item.get("descriptionPlain") or item.get("description") or ""]
+    for section in item.get("lists") or []:
+        sections.append(f"{section.get('text') or ''}\n{plain_text(section.get('content') or '')}")
+    sections.append(item.get("additionalPlain") or item.get("additional") or "")
+    return "\n\n".join(part for part in sections if part.strip())
 
 
 def _profile_aliases(key: str) -> tuple[str, ...]:
@@ -64,8 +87,16 @@ def infer_remote_scope(location: str, description: str, is_remote: bool | None =
     workplace = workplace_type.lower()
     home_aliases = _profile_aliases("home_search_aliases")
     target_aliases = _profile_aliases("target_location_aliases")
-    if _mentions(loc, target_aliases) and sponsorship_advertised(body):
+    target_abroad = _mentions(loc, target_aliases)
+    if target_abroad and sponsorship_advertised(body):
         return "sponsored_abroad"
+    if target_abroad and sponsorship_denied(body):
+        return "excluded"
+    if target_abroad:
+        if (is_remote is True or workplace == "remote") and not re.search(
+            r"\b(?:visa|sponsor\w*|relocat\w*|work permit)\b", body):
+            return "excluded"
+        return "unknown"
     if workplace in {"onsite", "on-site", "hybrid"} or is_remote is False:
         return "excluded"
     if re.search(r"\b(us only|usa only|united states only|canada only|eu only|europe only|uk only|within the us|u\.s\. only)\b", f"{loc} {body}"):
@@ -111,7 +142,7 @@ def score_job(title: str, location: str, description: str, remote_scope: str) ->
         points -= 50
         reasons.append("remote location excludes configured home location")
     else:
-        reasons.append("remote eligibility unconfirmed")
+        reasons.append("employment-location eligibility unconfirmed")
     if re.search(r"\b(intern|internship|sales|recruiter|marketing)\b", title_lower):
         points -= 45
         reasons.append("different role family")
@@ -139,13 +170,27 @@ def sponsorship_advertised(description: str) -> bool:
                  r"(?:cannot|can't|unable to|not in a position to|do not|don't)\s+(?:offer|provide|support)?\s*visa sponsorship|"
                  r"(?:do|does) not sponsor visas|visa\s*:\s*[^.]{0,80}(?:not|doesn't|can't|cannot|unable)[^.]{0,30}sponsor)\b", text):
         return False
-    return bool(re.search(r"\b(visa sponsorship (?:is )?available|visa sponsorship (?:and|&) relocation|"
-                          r"visa sponsorship\s*:\s*(?:we\s+)?(?:provide|offer|support|available)|"
+    return bool(re.search(r"\b(visa sponsorship (?:is )?available|full visa sponsorship|skilled worker visa sponsorship|"
+                          r"(?:able to )?(?:offer|provide) visa sponsorship|support (?:with )?visa sponsorship|"
+                          r"visa sponsorship (?:and|&) relocation|"
+                          r"visa sponsorship\s*:\s*(?:we\s+)?(?:provide|offer|support|available|yes)|"
                           r"relocation support(?: and|,)\s*visa sponsorship|including visa sponsorship|"
                           r"visa sponsorship as a|visa sponsorship where necessary|"
-                          r"sponsor visas|visa sponsorship offered|"
+                          r"sponsor visas|sponsor international candidates|visa sponsorship offered|"
                           r"visa\s*:\s*[^.]{0,80}\bsponsors?\b[^.]{0,80}\bvisa\b|"
                           r"visa sponsorship\.\s*(?:for\b|$))", text))
+
+
+def sponsorship_denied(description: str) -> bool:
+    text = description.lower()
+    return bool(re.search(
+        r"\b(?:no visa sponsorship|visa sponsorship (?:is )?not available|"
+        r"(?:cannot|can't|unable to|do not|don't)\s+(?:offer|provide|support)?"
+        r"(?:\s+with)?\s*visa sponsorship|"
+        r"(?:do|does) not sponsor visas|"
+        r"(?:must|need to) (?:already |currently )?(?:have|hold|possess) "
+        r"(?:the )?(?:right to work|work authori[sz]ation)|"
+        r"(?:right to work|work authori[sz]ation) (?:is )?required)", text))
 
 
 def _enrich(job: dict) -> dict:
@@ -177,7 +222,7 @@ def fetch_board(provider: str, slug: str, company: str) -> list[dict]:
             "url": item.get("hostedUrl") or item.get("applyUrl"),
             "apply_url": item.get("applyUrl") or item.get("hostedUrl"),
             "title": item["text"], "location": (item.get("categories") or {}).get("location", ""),
-            "description": item.get("descriptionPlain") or item.get("description", ""),
+            "description": lever_description(item),
             "workplace_type": item.get("workplaceType", ""),
             "posted_at": lever_created_at(item.get("createdAt")),
         }) for item in payload if item.get("hostedUrl") or item.get("applyUrl")]
@@ -201,7 +246,8 @@ def fetch_board(provider: str, slug: str, company: str) -> list[dict]:
             "is_remote": item.get("isRemote"), "workplace_type": item.get("workplaceType", ""),
             "salary": ashby_salary(item.get("compensation")),
             "posted_at": item.get("publishedAt"),
-        }) for item in jobs if item.get("jobUrl") or item.get("applyUrl")]
+        }) for item in jobs if (item.get("jobUrl") or item.get("applyUrl"))
+             and str(item.get("title") or "").strip()]
     raise ValueError(f"Unsupported provider: {provider}")
 
 
