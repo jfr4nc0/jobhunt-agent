@@ -49,6 +49,18 @@ def test_job_dedup_and_application_history(tmp_path: Path):
     assert partial["notes"] == "Missing traffic figure"
 
 
+def test_refreshed_posting_updates_title_without_resetting_application(tmp_path: Path):
+    db_path = tmp_path / "applications.sqlite3"
+    original = job()
+    original["title"] = "Principal Backend Engineer"
+    job_id = db.upsert_job(original, db_path)
+    db.set_status(job_id, "shortlisted", db_path=db_path)
+    assert db.upsert_job({**original, "title": "Senior Backend Engineer"}, db_path) == job_id
+    saved = db.get_job(job_id, db_path)
+    assert saved["title"] == "Senior Backend Engineer"
+    assert saved["status"] == "shortlisted"
+
+
 def test_board_normalization_and_match(monkeypatch, tmp_path):
     candidate = tmp_path / "profile.json"
     candidate.write_text(json.dumps({

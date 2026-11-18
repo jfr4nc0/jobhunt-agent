@@ -272,11 +272,11 @@ def _upsert_job_in_conn(conn: sqlite3.Connection, job: dict) -> int:
         existing = conn.execute("SELECT id FROM jobs WHERE source=? AND source_id=?", (source, source_id)).fetchone()
     if existing:
         job_id = existing[0]
-        conn.execute("""UPDATE jobs SET last_seen_at=?, location=COALESCE(?,location),
+        conn.execute("""UPDATE jobs SET title=?,last_seen_at=?, location=COALESCE(?,location),
             description=COALESCE(?,description),
             salary=COALESCE(?,salary), posted_at=COALESCE(?,posted_at),
             apply_url=COALESCE(?,apply_url), match_score=?, match_reason=?, remote_scope=?
-            WHERE id=?""", (stamp, job.get("location"), job.get("description"), job.get("salary"), job.get("posted_at"),
+            WHERE id=?""", (title, stamp, job.get("location"), job.get("description"), job.get("salary"), job.get("posted_at"),
                           apply_url, job.get("match_score", 0), job.get("match_reason"),
                           job.get("remote_scope", "unknown"), job_id))
         return job_id
