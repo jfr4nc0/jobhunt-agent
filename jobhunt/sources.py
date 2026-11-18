@@ -260,6 +260,16 @@ def discover(db_path=db.DB_PATH) -> dict:
     for board in db.list_boards(db_path):
         try:
             listings = fetch_board(board["provider"], board["slug"], board["company_name"])
+            # A board can publish a partially populated posting while it is being
+            # edited. Keep the rest of that board's vacancies discoverable.
+            invalid = sum(not str(job.get("company") or "").strip()
+                          or not str(job.get("title") or "").strip() for job in listings)
+            if invalid:
+                results["errors"].append(
+                    f"{board['provider']}/{board['slug']}: skipped {invalid} listing(s) without company or title")
+                listings = [job for job in listings
+                            if str(job.get("company") or "").strip()
+                            and str(job.get("title") or "").strip()]
             job_ids = db.upsert_jobs(listings, db_path)
             for job, job_id in zip(listings, job_ids):
                 if job["manual_only"] and db.get_job(job_id, db_path)["status"] == "discovered":
